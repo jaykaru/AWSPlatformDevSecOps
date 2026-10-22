@@ -8,13 +8,18 @@ The repository follows a step-by-step modular approach so that each AWS componen
 
 ## 1. Project Overview & Current State
 
-Currently, the project is focused on the foundational layer of any AWS architecture: **Amazon Virtual Private Cloud (VPC)**.
+Currently, the project focuses on foundational networking: **Amazon Virtual Private Cloud (VPC)** and **initial Public Subnets**.
 
-To keep things clear and easy to understand, we are intentionally starting **only with the VPC**:
+To keep things clear and progressive, we manage these resources through a reusable module:
 - ✅ **Custom VPC** created in Region `eu-north-1` (Stockholm)
 - ✅ Dedicated CIDR Block: `10.20.0.0/16` (providing 65,536 private IP addresses)
 - ✅ DNS support and DNS hostnames enabled
-- ⏳ *Subnets, Internet Gateway, Route Tables, and NAT Gateway are intentionally postponed to later stages.*
+- ✅ **Public Subnets managed dynamically with `for_each`** across distinct Availability Zones:
+  - **Public-A:** `10.20.1.0/24` in `eu-north-1a` (AZ index `0`)
+  - **Public-B:** `10.20.2.0/24` in `eu-north-1b` (AZ index `1`)
+- ✅ AZ names dynamically discovered via `data "aws_availability_zones" "available"`
+- ✅ Subnet safety check via `precondition` ensuring AZ index is within available AZ bounds
+- ⏳ *Internet Gateway, Route Tables, and NAT Gateway are intentionally postponed to later stages.*
 
 ---
 
@@ -50,13 +55,19 @@ AwsPlatformDevSecOps/
 - **Environment:** `dev`
 - **Project Name:** `aws-platform-devsecops`
 
-### VPC Specifications
-| Parameter | Value | Purpose |
+### VPC & Subnet Specifications
+| Resource / Parameter | Value | Purpose |
 | :--- | :--- | :--- |
-| **CIDR Block** | `10.20.0.0/16` | Private IP range for the cloud network |
+| **VPC CIDR Block** | `10.20.0.0/16` | Private IP range for the cloud network |
 | **enable_dns_support** | `true` | Allows AWS DNS resolver to resolve domain queries |
 | **enable_dns_hostnames** | `true` | Assigns public/private DNS hostnames to instances |
-| **Name Tag** | `aws-platform-devsecops-dev-vpc` | Easy resource identification in AWS Console |
+| **VPC Name Tag** | `aws-platform-devsecops-dev-vpc` | Identifies the VPC |
+| **Public Subnet A CIDR** | `10.20.1.0/24` | CIDR for Public Subnet A (`public-a`) |
+| **Public Subnet A AZ** | Dynamic (`eu-north-1a`) | First AZ index `0` from available AZs |
+| **Public Subnet A Name** | `aws-platform-devsecops-dev-public-a` | Name tag for Subnet A |
+| **Public Subnet B CIDR** | `10.20.2.0/24` | CIDR for Public Subnet B (`public-b`) |
+| **Public Subnet B AZ** | Dynamic (`eu-north-1b`) | Second AZ index `1` from available AZs |
+| **Public Subnet B Name** | `aws-platform-devsecops-dev-public-b` | Name tag for Subnet B |
 
 ---
 
@@ -86,16 +97,16 @@ See what Terraform plans to create without applying any changes:
 ```bash
 terraform plan
 ```
-*Expected plan output: `Plan: 1 to add, 0 to change, 0 to destroy` (only `aws_vpc`).*
+*Expected plan output: `Plan: 3 to add, 0 to change, 0 to destroy` (`aws_vpc`, `aws_subnet.public["public-a"]`, and `aws_subnet.public["public-b"]`).*
 
-### Step 5: Deploy the VPC (Optional)
-When you are ready to provision the VPC in your AWS account:
+### Step 5: Deploy the Network (Optional)
+When you are ready to provision the VPC and subnets in your AWS account:
 ```bash
 terraform apply
 ```
 
 ### Step 6: Clean Up (Destroy)
-To delete the created VPC and avoid any unnecessary state:
+To delete the created VPC and subnets to avoid unnecessary state:
 ```bash
 terraform destroy
 ```
@@ -104,9 +115,9 @@ terraform destroy
 
 ## 5. Next Steps / Roadmap
 
-Once you are comfortable with how the VPC works:
-1. **Subnets:** Add Public and Private Subnets across multiple Availability Zones (`eu-north-1a`, `eu-north-1b`).
-2. **Internet Gateway (IGW):** Enable public internet access for resources in public subnets.
-3. **Route Tables:** Create and associate public and private route tables.
+Now that the VPC and public subnets exist:
+1. **Internet Gateway (IGW):** Attach an IGW to enable internet traffic into/out of the VPC.
+2. **Route Tables:** Create a public route table with a default route (`0.0.0.0/0` -> IGW) and associate both public subnets.
+3. **Private Subnets:** Add private subnets across multiple AZs for internal workloads/databases.
 4. **NAT Gateway:** Allow instances in private subnets to reach the internet safely for updates without accepting inbound traffic.
 5. **Security Groups & Network ACLs:** Add firewall rules for security.

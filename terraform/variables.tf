@@ -19,6 +19,11 @@ variable "vpc_cidr" {
   type        = string
 }
 
+variable "public_subnet_a_cidr" {
+  description = "CIDR block for Public Subnet A"
+  type        = string
+}
+
 variable "tags" {
   description = "Additional tags"
   type        = map(string)

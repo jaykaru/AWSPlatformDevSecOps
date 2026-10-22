@@ -23,6 +23,11 @@ output "internet_gateway_id" {
   value       = module.networking.internet_gateway_id
 }
 
+output "public_route_table_id" {
+  description = "Created public route table ID"
+  value       = module.networking.public_route_table_id
+}
+
 output "public_subnet_ids" {
   description = "Created public subnet IDs by subnet key"
   value       = module.networking.public_subnet_ids

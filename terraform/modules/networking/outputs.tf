@@ -13,6 +13,11 @@ output "internet_gateway_id" {
   value       = aws_internet_gateway.this.id
 }
 
+output "public_route_table_id" {
+  description = "Public route table ID"
+  value       = aws_route_table.public.id
+}
+
 output "public_subnet_ids" {
   description = "Public subnet IDs by subnet key"
   value       = { for k, s in aws_subnet.public : k => s.id }

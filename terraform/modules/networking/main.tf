@@ -68,6 +68,21 @@ resource "aws_internet_gateway" "this" {
   )
 }
 
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.this.id
+
+  tags = merge(
+    local.common_tags,
+    { Name = "aws-data-platform-${var.environment}-public-rt" }
+  )
+}
+
+resource "aws_route" "public_internet_access" {
+  route_table_id         = aws_route_table.public.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.this.id
+}
+
 resource "aws_subnet" "public" {
   for_each = local.public_subnets
 
@@ -87,6 +102,13 @@ resource "aws_subnet" "public" {
     local.common_tags,
     { Name = "${var.project_name}-${var.environment}-${each.key}" }
   )
+}
+
+resource "aws_route_table_association" "public" {
+  for_each = aws_subnet.public
+
+  subnet_id      = each.value.id
+  route_table_id = aws_route_table.public.id
 }
 
 resource "aws_subnet" "application" {

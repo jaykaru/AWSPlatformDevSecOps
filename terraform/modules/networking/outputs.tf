@@ -17,3 +17,13 @@ output "public_subnet_azs" {
   description = "Public subnet availability zones by subnet key"
   value       = { for k, s in aws_subnet.public : k => s.availability_zone }
 }
+
+output "application_subnet_ids" {
+  description = "Application subnet IDs by subnet key"
+  value       = { for k, s in aws_subnet.application : k => s.id }
+}
+
+output "application_subnet_azs" {
+  description = "Application subnet availability zones by subnet key"
+  value       = { for k, s in aws_subnet.application : k => s.availability_zone }
+}

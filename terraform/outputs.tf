@@ -27,3 +27,13 @@ output "public_subnet_azs" {
   description = "Availability zones for public subnets by subnet key"
   value       = module.networking.public_subnet_azs
 }
+
+output "application_subnet_ids" {
+  description = "Created application subnet IDs by subnet key"
+  value       = module.networking.application_subnet_ids
+}
+
+output "application_subnet_azs" {
+  description = "Availability zones for application subnets by subnet key"
+  value       = module.networking.application_subnet_azs
+}

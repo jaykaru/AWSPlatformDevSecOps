@@ -8,12 +8,12 @@ output "vpc_cidr_block" {
   value       = aws_vpc.this.cidr_block
 }
 
-output "public_subnet_a_id" {
-  description = "Public Subnet A ID"
-  value       = aws_subnet.public_a.id
+output "public_subnet_ids" {
+  description = "Public subnet IDs by subnet key"
+  value       = { for k, s in aws_subnet.public : k => s.id }
 }
 
-output "public_subnet_a_az" {
-  description = "Availability Zone used by Public Subnet A"
-  value       = aws_subnet.public_a.availability_zone
+output "public_subnet_azs" {
+  description = "Public subnet availability zones by subnet key"
+  value       = { for k, s in aws_subnet.public : k => s.availability_zone }
 }

@@ -6,6 +6,18 @@ locals {
     },
     var.tags
   )
+
+  public_subnets = {
+    public-a = {
+      cidr_block = var.public_subnet_a_cidr
+      az_index   = 0
+    }
+
+    public-b = {
+      cidr_block = var.public_subnet_b_cidr
+      az_index   = 1
+    }
+  }
 }
 
 data "aws_availability_zones" "available" {
@@ -23,14 +35,23 @@ resource "aws_vpc" "this" {
   )
 }
 
-resource "aws_subnet" "public_a" {
+resource "aws_subnet" "public" {
+  for_each = local.public_subnets
+
   vpc_id                  = aws_vpc.this.id
-  cidr_block              = var.public_subnet_a_cidr
-  availability_zone       = data.aws_availability_zones.available.names[0]
+  cidr_block              = each.value.cidr_block
+  availability_zone       = data.aws_availability_zones.available.names[each.value.az_index]
   map_public_ip_on_launch = true
+
+  lifecycle {
+    precondition {
+      condition     = each.value.az_index < length(data.aws_availability_zones.available.names)
+      error_message = "Subnet az_index is out of range for available availability zones."
+    }
+  }
 
   tags = merge(
     local.common_tags,
-    { Name = "${var.project_name}-${var.environment}-public-a" }
+    { Name = "${var.project_name}-${var.environment}-${each.key}" }
   )
 }

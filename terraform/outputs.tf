@@ -18,6 +18,11 @@ output "vpc_cidr_block" {
   value       = module.networking.vpc_cidr_block
 }
 
+output "internet_gateway_id" {
+  description = "Created Internet Gateway ID"
+  value       = module.networking.internet_gateway_id
+}
+
 output "public_subnet_ids" {
   description = "Created public subnet IDs by subnet key"
   value       = module.networking.public_subnet_ids

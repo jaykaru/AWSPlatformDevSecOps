@@ -59,6 +59,15 @@ resource "aws_vpc" "this" {
   )
 }
 
+resource "aws_internet_gateway" "this" {
+  vpc_id = aws_vpc.this.id
+
+  tags = merge(
+    local.common_tags,
+    { Name = "aws-data-platform-${var.environment}-igw" }
+  )
+}
+
 resource "aws_subnet" "public" {
   for_each = local.public_subnets
 

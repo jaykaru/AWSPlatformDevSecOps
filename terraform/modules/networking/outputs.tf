@@ -8,6 +8,11 @@ output "vpc_cidr_block" {
   value       = aws_vpc.this.cidr_block
 }
 
+output "internet_gateway_id" {
+  description = "Internet Gateway ID"
+  value       = aws_internet_gateway.this.id
+}
+
 output "public_subnet_ids" {
   description = "Public subnet IDs by subnet key"
   value       = { for k, s in aws_subnet.public : k => s.id }

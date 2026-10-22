@@ -23,9 +23,29 @@ output "internet_gateway_id" {
   value       = module.networking.internet_gateway_id
 }
 
+output "nat_eip_id" {
+  description = "Created Elastic IP allocation ID for NAT Gateway"
+  value       = module.networking.nat_eip_id
+}
+
+output "nat_eip_public_ip" {
+  description = "Created Elastic IP public IP address for NAT Gateway"
+  value       = module.networking.nat_eip_public_ip
+}
+
+output "nat_gateway_id" {
+  description = "Created NAT Gateway ID"
+  value       = module.networking.nat_gateway_id
+}
+
 output "public_route_table_id" {
   description = "Created public route table ID"
   value       = module.networking.public_route_table_id
+}
+
+output "application_route_table_id" {
+  description = "Created application route table ID"
+  value       = module.networking.application_route_table_id
 }
 
 output "public_subnet_ids" {

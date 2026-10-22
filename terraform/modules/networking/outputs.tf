@@ -13,9 +13,29 @@ output "internet_gateway_id" {
   value       = aws_internet_gateway.this.id
 }
 
+output "nat_eip_id" {
+  description = "Elastic IP allocation ID for NAT Gateway"
+  value       = aws_eip.nat.id
+}
+
+output "nat_eip_public_ip" {
+  description = "Elastic IP public address for NAT Gateway"
+  value       = aws_eip.nat.public_ip
+}
+
+output "nat_gateway_id" {
+  description = "NAT Gateway ID"
+  value       = aws_nat_gateway.this.id
+}
+
 output "public_route_table_id" {
   description = "Public route table ID"
   value       = aws_route_table.public.id
+}
+
+output "application_route_table_id" {
+  description = "Application route table ID"
+  value       = aws_route_table.application.id
 }
 
 output "public_subnet_ids" {

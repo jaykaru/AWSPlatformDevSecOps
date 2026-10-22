@@ -25,7 +25,14 @@ To keep things modular and maintainable, all network tiers are managed via the r
   - **Data-B:** `10.20.22.0/24` in `eu-north-1b` (AZ index `1`, `map_public_ip_on_launch = false`)
 - ✅ AZ names dynamically discovered via `data "aws_availability_zones" "available"`
 - ✅ Subnet safety check via `precondition` ensuring AZ index is within available AZ bounds
-- ⏳ *Internet Gateway, Route Tables, and NAT Gateway are intentionally postponed to later stages.*
+- ✅ **Internet Gateway (IGW):** Created (`aws-data-platform-dev-igw`) and attached to the VPC
+- ✅ **Public Route Table:** Created (`aws-data-platform-dev-public-rt`) and associated with `public-a` and `public-b`
+- ✅ **Default Internet Route:** Route `0.0.0.0/0` targeting the Internet Gateway attached to the Public Route Table
+- ✅ **Elastic IP (EIP):** Allocated (`aws-platform-devsecops-dev-nat-eip`) specifically for the NAT Gateway
+- ✅ **NAT Gateway:** Provisioned (`aws-platform-devsecops-dev-nat-gateway`) in `public-a` using the allocated EIP
+- ✅ **Application Route Table:** Created (`aws-data-platform-dev-application-rt`) and associated with `application-a` and `application-b`
+- ✅ **Application Outbound Internet Route:** Route `0.0.0.0/0` targeting the NAT Gateway for private outbound internet access
+- ⏳ *Data Tier Route Table (isolated) and Security Groups / NACLs are postponed to next steps.*
 
 ---
 
@@ -62,15 +69,20 @@ AwsPlatformDevSecOps/
 - **Project Name:** `aws-platform-devsecops`
 
 ### VPC & Subnet Specifications
-| Tier | Subnet / Resource | CIDR Block | AZ (Dynamic) | Public IP on Launch | Name Tag |
+| Tier / Component | Resource | CIDR Block / Details | AZ (Dynamic) | Public IP on Launch | Name Tag |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **VPC** | VPC | `10.20.0.0/16` | Region-wide | — | `aws-platform-devsecops-dev-vpc` |
-| **Public** | Public-A | `10.20.1.0/24` | `eu-north-1a` (idx 0) | `true` | `aws-platform-devsecops-dev-public-a` |
-| **Public** | Public-B | `10.20.2.0/24` | `eu-north-1b` (idx 1) | `true` | `aws-platform-devsecops-dev-public-b` |
-| **Application** | Application-A | `10.20.11.0/24` | `eu-north-1a` (idx 0) | `false` | `aws-data-platform-dev-application-a` |
-| **Application** | Application-B | `10.20.12.0/24` | `eu-north-1b` (idx 1) | `false` | `aws-data-platform-dev-application-b` |
-| **Data** | Data-A | `10.20.21.0/24` | `eu-north-1a` (idx 0) | `false` | `aws-data-platform-dev-data-a` |
-| **Data** | Data-B | `10.20.22.0/24` | `eu-north-1b` (idx 1) | `false` | `aws-data-platform-dev-data-b` |
+| **Internet Gateway** | IGW | Attached to VPC | Region-wide | — | `aws-data-platform-dev-igw` |
+| **Elastic IP** | EIP (NAT) | `domain = "vpc"` | Region-wide | — | `aws-platform-devsecops-dev-nat-eip` |
+| **NAT Gateway** | NAT Gateway | Located in `public-a` | `eu-north-1a` | — | `aws-platform-devsecops-dev-nat-gateway` |
+| **Public Routing** | Public Route Table | `0.0.0.0/0` -> IGW | Region-wide | — | `aws-data-platform-dev-public-rt` |
+| **Application Routing** | App Route Table | `0.0.0.0/0` -> NAT Gateway | Region-wide | — | `aws-data-platform-dev-application-rt` |
+| **Public Subnets** | Public-A | `10.20.1.0/24` | `eu-north-1a` (idx 0) | `true` | `aws-platform-devsecops-dev-public-a` |
+| **Public Subnets** | Public-B | `10.20.2.0/24` | `eu-north-1b` (idx 1) | `true` | `aws-platform-devsecops-dev-public-b` |
+| **Application Subnets** | Application-A | `10.20.11.0/24` | `eu-north-1a` (idx 0) | `false` | `aws-data-platform-dev-application-a` |
+| **Application Subnets** | Application-B | `10.20.12.0/24` | `eu-north-1b` (idx 1) | `false` | `aws-data-platform-dev-application-b` |
+| **Data Subnets** | Data-A | `10.20.21.0/24` | `eu-north-1a` (idx 0) | `false` | `aws-data-platform-dev-data-a` |
+| **Data Subnets** | Data-B | `10.20.22.0/24` | `eu-north-1b` (idx 1) | `false` | `aws-data-platform-dev-data-b` |
 
 ---
 
@@ -100,16 +112,24 @@ See what Terraform plans to create without applying any changes:
 ```bash
 terraform plan
 ```
-*Expected plan output: `Plan: 7 to add, 0 to change, 0 to destroy` (1 VPC + 2 Public subnets + 2 Application subnets + 2 Data subnets).*
+*Expected plan output: `Plan: 16 to add, 0 to change, 0 to destroy`*
+- 1 VPC (`aws_vpc`)
+- 1 Internet Gateway (`aws_internet_gateway`)
+- 1 Elastic IP (`aws_eip`)
+- 1 NAT Gateway (`aws_nat_gateway`)
+- 2 Route Tables: Public (`aws_route_table.public`) & Application (`aws_route_table.application`)
+- 2 Routes: Internet default (`0.0.0.0/0` -> IGW) & App NAT default (`0.0.0.0/0` -> NAT)
+- 4 Route Table Associations: 2 Public (`public-a`, `public-b`) + 2 Application (`application-a`, `application-b`)
+- 6 Subnets across Public, Application, and Data tiers
 
 ### Step 5: Deploy the Network (Optional)
-When you are ready to provision the VPC and subnets in your AWS account:
+When you are ready to provision the VPC and networking resources in your AWS account:
 ```bash
 terraform apply
 ```
 
 ### Step 6: Clean Up (Destroy)
-To delete the created VPC and subnets to avoid unnecessary state:
+To delete the created infrastructure and avoid any unwanted AWS costs:
 ```bash
 terraform destroy
 ```
@@ -118,11 +138,7 @@ terraform destroy
 
 ## 5. Next Steps / Roadmap
 
-Now that the VPC and 3-tier subnets (Public, Application, Data) exist:
-1. **Internet Gateway (IGW):** Attach an IGW to enable internet traffic into/out of the VPC.
-2. **Route Tables:**
-   - Create a **Public Route Table** (`0.0.0.0/0` -> IGW) and associate `public-a`, `public-b`.
-   - Create **Private Route Tables** for application and data tiers.
-3. **NAT Gateway:** Allow instances in application subnets to reach the internet safely for updates without accepting inbound traffic.
-4. **Data Tier Isolation:** Ensure data subnets remain completely isolated (no direct internet or NAT routes).
-5. **Security Groups & Network ACLs:** Add tier-specific firewall rules for end-to-end security (Web -> App -> Data).
+Now that the VPC, Internet Gateway, Public Routing, NAT Gateway, Application Routing, and 3-Tier Subnets exist:
+1. **Data Tier Route Table:** Create a dedicated, isolated route table for `data-a` & `data-b` with **no** internet routes (`0.0.0.0/0`) for maximum database protection.
+2. **Security Groups & Network ACLs:** Add firewall rules controlling traffic strictly between tiers (Internet -> Public -> App -> Data).
+3. **Multi-AZ NAT Gateway (Optional / Prod readiness):** Deploy an additional NAT Gateway in `public-b` for high availability in production environments.

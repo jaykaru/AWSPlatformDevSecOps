@@ -8,5 +8,7 @@ module "networking" {
   public_subnet_b_cidr      = var.public_subnet_b_cidr
   application_subnet_a_cidr = var.application_subnet_a_cidr
   application_subnet_b_cidr = var.application_subnet_b_cidr
+  data_subnet_a_cidr        = var.data_subnet_a_cidr
+  data_subnet_b_cidr        = var.data_subnet_b_cidr
   tags                      = var.tags
 }

@@ -8,15 +8,21 @@ The repository follows a step-by-step modular approach so that each AWS componen
 
 ## 1. Project Overview & Current State
 
-Currently, the project focuses on foundational networking: **Amazon Virtual Private Cloud (VPC)** and **initial Public Subnets**.
+Currently, the project focuses on foundational 3-tier networking: **Amazon Virtual Private Cloud (VPC)** with **Public**, **Application**, and **Data** subnets across multiple Availability Zones.
 
-To keep things clear and progressive, we manage these resources through a reusable module:
+To keep things modular and maintainable, all network tiers are managed via the reusable networking module (`modules/networking/`):
 - ✅ **Custom VPC** created in Region `eu-north-1` (Stockholm)
-- ✅ Dedicated CIDR Block: `10.20.0.0/16` (providing 65,536 private IP addresses)
+- ✅ Dedicated CIDR Block: `10.20.0.0/16` (65,536 private IP addresses)
 - ✅ DNS support and DNS hostnames enabled
-- ✅ **Public Subnets managed dynamically with `for_each`** across distinct Availability Zones:
-  - **Public-A:** `10.20.1.0/24` in `eu-north-1a` (AZ index `0`)
-  - **Public-B:** `10.20.2.0/24` in `eu-north-1b` (AZ index `1`)
+- ✅ **Public Subnets (Web/Ingress tier):**
+  - **Public-A:** `10.20.1.0/24` in `eu-north-1a` (AZ index `0`, `map_public_ip_on_launch = true`)
+  - **Public-B:** `10.20.2.0/24` in `eu-north-1b` (AZ index `1`, `map_public_ip_on_launch = true`)
+- ✅ **Application Subnets (App/Compute tier):**
+  - **Application-A:** `10.20.11.0/24` in `eu-north-1a` (AZ index `0`, `map_public_ip_on_launch = false`)
+  - **Application-B:** `10.20.12.0/24` in `eu-north-1b` (AZ index `1`, `map_public_ip_on_launch = false`)
+- ✅ **Data Subnets (Database/Storage tier):**
+  - **Data-A:** `10.20.21.0/24` in `eu-north-1a` (AZ index `0`, `map_public_ip_on_launch = false`)
+  - **Data-B:** `10.20.22.0/24` in `eu-north-1b` (AZ index `1`, `map_public_ip_on_launch = false`)
 - ✅ AZ names dynamically discovered via `data "aws_availability_zones" "available"`
 - ✅ Subnet safety check via `precondition` ensuring AZ index is within available AZ bounds
 - ⏳ *Internet Gateway, Route Tables, and NAT Gateway are intentionally postponed to later stages.*
@@ -56,18 +62,15 @@ AwsPlatformDevSecOps/
 - **Project Name:** `aws-platform-devsecops`
 
 ### VPC & Subnet Specifications
-| Resource / Parameter | Value | Purpose |
-| :--- | :--- | :--- |
-| **VPC CIDR Block** | `10.20.0.0/16` | Private IP range for the cloud network |
-| **enable_dns_support** | `true` | Allows AWS DNS resolver to resolve domain queries |
-| **enable_dns_hostnames** | `true` | Assigns public/private DNS hostnames to instances |
-| **VPC Name Tag** | `aws-platform-devsecops-dev-vpc` | Identifies the VPC |
-| **Public Subnet A CIDR** | `10.20.1.0/24` | CIDR for Public Subnet A (`public-a`) |
-| **Public Subnet A AZ** | Dynamic (`eu-north-1a`) | First AZ index `0` from available AZs |
-| **Public Subnet A Name** | `aws-platform-devsecops-dev-public-a` | Name tag for Subnet A |
-| **Public Subnet B CIDR** | `10.20.2.0/24` | CIDR for Public Subnet B (`public-b`) |
-| **Public Subnet B AZ** | Dynamic (`eu-north-1b`) | Second AZ index `1` from available AZs |
-| **Public Subnet B Name** | `aws-platform-devsecops-dev-public-b` | Name tag for Subnet B |
+| Tier | Subnet / Resource | CIDR Block | AZ (Dynamic) | Public IP on Launch | Name Tag |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **VPC** | VPC | `10.20.0.0/16` | Region-wide | — | `aws-platform-devsecops-dev-vpc` |
+| **Public** | Public-A | `10.20.1.0/24` | `eu-north-1a` (idx 0) | `true` | `aws-platform-devsecops-dev-public-a` |
+| **Public** | Public-B | `10.20.2.0/24` | `eu-north-1b` (idx 1) | `true` | `aws-platform-devsecops-dev-public-b` |
+| **Application** | Application-A | `10.20.11.0/24` | `eu-north-1a` (idx 0) | `false` | `aws-data-platform-dev-application-a` |
+| **Application** | Application-B | `10.20.12.0/24` | `eu-north-1b` (idx 1) | `false` | `aws-data-platform-dev-application-b` |
+| **Data** | Data-A | `10.20.21.0/24` | `eu-north-1a` (idx 0) | `false` | `aws-data-platform-dev-data-a` |
+| **Data** | Data-B | `10.20.22.0/24` | `eu-north-1b` (idx 1) | `false` | `aws-data-platform-dev-data-b` |
 
 ---
 
@@ -97,7 +100,7 @@ See what Terraform plans to create without applying any changes:
 ```bash
 terraform plan
 ```
-*Expected plan output: `Plan: 3 to add, 0 to change, 0 to destroy` (`aws_vpc`, `aws_subnet.public["public-a"]`, and `aws_subnet.public["public-b"]`).*
+*Expected plan output: `Plan: 7 to add, 0 to change, 0 to destroy` (1 VPC + 2 Public subnets + 2 Application subnets + 2 Data subnets).*
 
 ### Step 5: Deploy the Network (Optional)
 When you are ready to provision the VPC and subnets in your AWS account:
@@ -115,9 +118,11 @@ terraform destroy
 
 ## 5. Next Steps / Roadmap
 
-Now that the VPC and public subnets exist:
+Now that the VPC and 3-tier subnets (Public, Application, Data) exist:
 1. **Internet Gateway (IGW):** Attach an IGW to enable internet traffic into/out of the VPC.
-2. **Route Tables:** Create a public route table with a default route (`0.0.0.0/0` -> IGW) and associate both public subnets.
-3. **Private Subnets:** Add private subnets across multiple AZs for internal workloads/databases.
-4. **NAT Gateway:** Allow instances in private subnets to reach the internet safely for updates without accepting inbound traffic.
-5. **Security Groups & Network ACLs:** Add firewall rules for security.
+2. **Route Tables:**
+   - Create a **Public Route Table** (`0.0.0.0/0` -> IGW) and associate `public-a`, `public-b`.
+   - Create **Private Route Tables** for application and data tiers.
+3. **NAT Gateway:** Allow instances in application subnets to reach the internet safely for updates without accepting inbound traffic.
+4. **Data Tier Isolation:** Ensure data subnets remain completely isolated (no direct internet or NAT routes).
+5. **Security Groups & Network ACLs:** Add tier-specific firewall rules for end-to-end security (Web -> App -> Data).

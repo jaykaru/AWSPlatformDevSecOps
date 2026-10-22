@@ -33,6 +33,16 @@ variable "application_subnet_b_cidr" {
   type        = string
 }
 
+variable "data_subnet_a_cidr" {
+  description = "CIDR block for Data Subnet A"
+  type        = string
+}
+
+variable "data_subnet_b_cidr" {
+  description = "CIDR block for Data Subnet B"
+  type        = string
+}
+
 variable "tags" {
   description = "Additional tags"
   type        = map(string)

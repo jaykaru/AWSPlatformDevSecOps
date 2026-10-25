@@ -1,0 +1,52 @@
+stages:
+  - fmt
+  - validate
+  - plan
+
+variables:
+  TF_ROOT: terraform  # Terraform root directory re use 
+  TF_IN_AUTOMATION: "true" # Terraform knows it is running inside CI/CD not locally
+
+default:
+  image:
+    name: hashicorp/terraform:1.14.0 # Use the specified Terraform Docker image for the CI jobs
+    entrypoint: [""] # Override the default entrypoint to allow GitLab CI to run Terraform commands directly
+  cache:
+    key:
+      files:
+        - terraform/.terraform.lock.hcl
+    paths:
+      - terraform/.terraform/providers
+
+terraform_fmt:
+  stage: fmt
+  script:
+    - cd "$TF_ROOT"
+    - terraform fmt -check -recursive
+
+terraform_validate:
+  stage: validate
+  needs: ["terraform_fmt"]
+  script:
+    - cd "$TF_ROOT"
+    - terraform init -backend=false -input=false
+    - terraform validate
+
+# terraform_plan:
+#   stage: plan
+#   needs: ["terraform_validate"]
+#   script:
+#     - cd "$TF_ROOT"
+#     - terraform init -backend=false -input=false
+#     - terraform plan -out=tfplan
+#     - terraform show -no-color tfplan > tfplan.txt
+#   artifacts:
+#     name: "tfplan-$CI_COMMIT_REF_SLUG"
+#     when: always
+#     paths:
+#       - terraform/tfplan
+#       - terraform/tfplan.txt
+#   rules:
+#     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+#     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+

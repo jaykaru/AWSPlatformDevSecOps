@@ -67,3 +67,14 @@ output "data_subnet_azs" {
   description = "Data subnet availability zones by subnet key"
   value       = { for k, s in aws_subnet.data : k => s.availability_zone }
 }
+
+output "vpc_flow_log_group_name" {
+  description = "CloudWatch Log Group used for VPC Flow Logs"
+  value       = aws_cloudwatch_log_group.vpc_flow_logs.name
+}
+
+output "vpc_flow_log_id" {
+  description = "VPC Flow Log ID"
+  value       = aws_flow_log.vpc.id
+}
+

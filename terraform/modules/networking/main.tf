@@ -69,6 +69,88 @@ resource "aws_default_security_group" "this" {
     }
   )
 }
+// creates cloudwatch logs for VPC flow logs
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name              = "/aws/vpc/${var.project_name}/${var.environment}/flow-logs"
+  retention_in_days = 30
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-${var.environment}-vpc-flow-logs"
+    }
+  )
+}
+
+// Creates an IAM role for VPC flow logs to assume and write logs to CloudWatch
+resource "aws_iam_role" "vpc_flow_logs" {
+  name = "${var.project_name}-${var.environment}-vpc-flow-logs-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Principal = {
+          // Trust policy for VPC flow logs is allowed to assume this role
+          Service = "vpc-flow-logs.amazonaws.com"
+        }
+
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+// Give the role permission to write VPC flow logs to CloudWatch
+resource "aws_iam_role_policy" "vpc_flow_logs" {
+  name = "${var.project_name}-${var.environment}-vpc-flow-logs-policy"
+  role = aws_iam_role.vpc_flow_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Effect = "Allow"
+
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+
+        // Permissions Policy: Allow the role to access all CloudWatch log resources
+        // For an enterprise refinement later, we can tighten the resource scope
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_flow_log" "vpc" {
+  vpc_id = aws_vpc.this.id
+
+  log_destination      = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  log_destination_type = "cloud-watch-logs"
+
+  iam_role_arn = aws_iam_role.vpc_flow_logs.arn
+
+  traffic_type = "ALL" // Capture all traffic types for the VPC flow logs and send them to CloudWatch
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-${var.environment}-vpc-flow-log"
+    }
+  )
+}
 
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id

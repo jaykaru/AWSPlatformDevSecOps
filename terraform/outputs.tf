@@ -77,3 +77,14 @@ output "data_subnet_azs" {
   description = "Availability zones for data subnets by subnet key"
   value       = module.networking.data_subnet_azs
 }
+
+output "vpc_flow_log_group_name" {
+  description = "CloudWatch Log Group used for VPC Flow Logs"
+  value       = module.networking.vpc_flow_log_group_name
+}
+
+output "vpc_flow_log_id" {
+  description = "VPC Flow Log ID"
+  value       = module.networking.vpc_flow_log_id
+}
+

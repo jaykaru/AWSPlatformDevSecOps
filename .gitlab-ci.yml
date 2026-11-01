@@ -14,10 +14,11 @@ workflow:
 variables:
   TF_ROOT: terraform  # Terraform root directory re use 
   TF_IN_AUTOMATION: "true" # Terraform knows it is running inside CI/CD not locally
+  TF_INPUT: "false"
 
 default:
   image:
-    name: hashicorp/terraform:1.14.0 # Use the specified Terraform Docker image for the CI jobs
+    name: hashicorp/terraform:1.13.3 # Use the specified Terraform Docker image for the CI jobs
     entrypoint: [""] # Override the default entrypoint to allow GitLab CI to run Terraform commands directly
   cache:
     key:
@@ -30,7 +31,7 @@ terraform_fmt:
   stage: fmt
   script:
     - cd "$TF_ROOT"
-    - terraform fmt -check -recursive
+    - terraform  fmt -check -recursive
 
 terraform_lint:
   stage: lint
@@ -48,7 +49,7 @@ terraform_validate:
   needs: ["terraform_lint"]
   script:
     - cd "$TF_ROOT"
-    - terraform init -backend=false -input=false
+    - terraform init -backend=false -input=$TF_INPUT
     - terraform validate
 
 terraform_checkov:

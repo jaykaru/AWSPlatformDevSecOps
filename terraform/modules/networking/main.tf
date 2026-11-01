@@ -59,6 +59,17 @@ resource "aws_vpc" "this" {
   )
 }
 
+resource "aws_default_security_group" "this" {
+  vpc_id = aws_vpc.this.id
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "${var.project_name}-${var.environment}-default-sg"
+    }
+  )
+}
+
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 
@@ -127,7 +138,7 @@ resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.this.id
   cidr_block              = each.value.cidr_block
   availability_zone       = data.aws_availability_zones.available.names[each.value.az_index]
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
 
   lifecycle {
     precondition {
